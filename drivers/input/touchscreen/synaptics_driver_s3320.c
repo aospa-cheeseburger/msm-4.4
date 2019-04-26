@@ -185,7 +185,7 @@ static int limit_enable = 1;
 static void synaptics_tpedge_limitfunc(void);
 #endif
 static int probe_flag;
-/*static int ch_getbase_status = 0;*/
+/*static int ch_getbase_status;*/
 /*struct timeval start_time,end_time;*/
 
 #ifdef SUPPORT_TP_SLEEP_MODE
@@ -280,7 +280,7 @@ static int F34_FLASH_CTRL00;
 static int F51_CUSTOM_CTRL00;
 static int F51_CUSTOM_DATA04;
 static int F51_CUSTOM_DATA11;
-static __read_mostly int version_is_s3508;
+static int version_is_s3508 __read_mostly;
 #if TP_TEST_ENABLE
 static int F54_ANALOG_QUERY_BASE;/*0x73*/
 static int F54_ANALOG_COMMAND_BASE;/*0x72*/
@@ -305,23 +305,29 @@ struct device_attribute *attr, char *buf);
 static int synapitcs_ts_update(struct i2c_client *client,
 const uint8_t *data, uint32_t data_len, bool force);
 
-static int synaptics_rmi4_i2c_read_block(struct i2c_client *client,
-unsigned char addr, unsigned short length, unsigned char *data);
+static inline int synaptics_rmi4_i2c_read_block(struct i2c_client *client,
+					 unsigned char addr,
+					 unsigned short length,
+					 unsigned char *data);
 
-static int synaptics_rmi4_i2c_write_block(struct i2c_client *client,
-unsigned char addr, unsigned short length, unsigned char const *data);
+static inline int synaptics_rmi4_i2c_write_block(struct i2c_client *client,
+					  unsigned char addr,
+					  unsigned short length,
+					  unsigned char const *data);
 
-static int synaptics_rmi4_i2c_read_byte(struct i2c_client *client,
-		unsigned char addr);
+static inline int synaptics_rmi4_i2c_read_byte(struct i2c_client *client,
+					unsigned char addr);
 
-static int synaptics_rmi4_i2c_write_byte(struct i2c_client *client,
-		unsigned char addr, unsigned char data);
+static inline int synaptics_rmi4_i2c_write_byte(struct i2c_client *client,
+					 unsigned char addr,
+					 unsigned char data);
 
-static int synaptics_rmi4_i2c_read_word(struct i2c_client *client,
-		unsigned char addr);
+static inline int synaptics_rmi4_i2c_read_word(struct i2c_client *client,
+					unsigned char addr);
 
-static int synaptics_rmi4_i2c_write_word(struct i2c_client *client,
-		unsigned char addr, unsigned short data);
+static inline int synaptics_rmi4_i2c_write_word(struct i2c_client *client,
+					 unsigned char addr,
+					 unsigned short data);
 static int synaptics_mode_change(int mode);
 
 #ifdef TPD_USE_EINT
@@ -924,8 +930,10 @@ static int synaptics_enable_interrupt(struct synaptics_ts_data *ts, int enable)
 	return 0;
 }
 
-static int synaptics_rmi4_i2c_read_block(struct i2c_client *client,
-unsigned char addr, unsigned short length, unsigned char *data)
+static inline int synaptics_rmi4_i2c_read_block(struct i2c_client *client,
+					 unsigned char addr,
+					 unsigned short length,
+					 unsigned char *data)
 {
 	int retval;
 	unsigned char retry;
@@ -964,8 +972,10 @@ unsigned char addr, unsigned short length, unsigned char *data)
 	return retval;
 }
 
-static int synaptics_rmi4_i2c_write_block(struct i2c_client *client,
-unsigned char addr, unsigned short length, unsigned char const *data)
+static inline int synaptics_rmi4_i2c_write_block(struct i2c_client *client,
+					  unsigned char addr,
+					  unsigned short length,
+					  unsigned char const *data)
 {
 	int retval;
 	unsigned char retry;
@@ -995,20 +1005,20 @@ unsigned char addr, unsigned short length, unsigned char const *data)
 	return retval;
 }
 
-static int synaptics_rmi4_i2c_read_byte(struct i2c_client *client,
-unsigned char addr)
+static inline int synaptics_rmi4_i2c_read_byte(struct i2c_client *client,
+					unsigned char addr)
 {
 	int retval = 0;
 	unsigned char buf[2] = {0};
 
 	retval = synaptics_rmi4_i2c_read_block(client, addr, 1, buf);
-	if (retval >= 0)
+	if (likely(retval >= 0))
 		retval = buf[0] & 0xff;
 	return retval;
 }
 
-static int synaptics_rmi4_i2c_write_byte(struct i2c_client *client,
-unsigned char addr, unsigned char data)
+static inline int synaptics_rmi4_i2c_write_byte(struct i2c_client *client,
+					 unsigned char addr, unsigned char data)
 {
 	int retval;
 	unsigned char data_send = data;
@@ -1017,26 +1027,27 @@ unsigned char addr, unsigned char data)
 	return retval;
 }
 
-static int synaptics_rmi4_i2c_read_word(struct i2c_client *client,
-unsigned char addr)
+static inline int synaptics_rmi4_i2c_read_word(struct i2c_client *client,
+					unsigned char addr)
 {
 	int retval;
 	unsigned char buf[2] = {0};
 
 	retval = synaptics_rmi4_i2c_read_block(client, addr, 2, buf);
-	if (retval >= 0)
+	if (likely(retval >= 0))
 		retval = buf[1] << 8 | buf[0];
 	return retval;
 }
 
-static int synaptics_rmi4_i2c_write_word(struct i2c_client *client,
-unsigned char addr, unsigned short data)
+static inline int synaptics_rmi4_i2c_write_word(struct i2c_client *client,
+					 unsigned char addr,
+					 unsigned short data)
 {
 	int retval;
 	unsigned char buf[2] = {data & 0xff, (data >> 8) & 0xff};
 
 	retval = synaptics_rmi4_i2c_write_block(client, addr, 2, buf);
-	if (retval >= 0)
+	if (likely(retval >= 0))
 		retval = buf[1] << 8 | buf[0];
 
 	return retval;
@@ -1116,11 +1127,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 	uint8_t gesture_buffer[10];
 	uint8_t gesture_sign = 0;
 	unsigned char reportbuf[3];
-
-	if (version_is_s3508)
-		F12_2D_DATA04 = 0x0008;
-	else
-		F12_2D_DATA04 = 0x000A;
 
 	TPD_DEBUG("%s start!\n", __func__);
 	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x00);
@@ -1316,10 +1322,6 @@ static inline void int_touch(void)
 	}
 #endif
 	i2c_smbus_write_byte_data(ts->client, 0xff, 0x0);
-	if (version_is_s3508)
-		F12_2D_DATA15 = 0x0009;
-	else
-		F12_2D_DATA15 = 0x000C;
 	ret = synaptics_rmi4_i2c_read_block(ts->client,
 	F12_2D_DATA15, 2, object_attention);
 
@@ -1474,7 +1476,6 @@ static inline void int_touch(void)
 #endif
 }
 
-static char log_count;
 #ifdef SUPPORT_TP_TOUCHKEY
 #define OEM_KEY_BACK (key_switch ? KEY_APPSELECT : KEY_BACK)
 #define OEM_KEY_APPSELECT (key_switch ? KEY_BACK : KEY_APPSELECT)
@@ -1498,9 +1499,6 @@ static inline void int_key_report_s3508(struct synaptics_ts_data *ts)
 		return;
 	}
 	button_key = synaptics_rmi4_i2c_read_byte(ts->client, F1A_0D_DATA00);
-	if ((++log_count % 4) == 1)
-		TPD_ERR("touch_key[0x%x],touchkey_state[0x%x]\n",
-		button_key, ts->pre_btn_state);
 	if ((button_key & 0x01) && !(ts->pre_btn_state & 0x01)
 	&& !key_back_disable) {
 		input_report_key(ts->input_dev, OEM_KEY_BACK, 1);
@@ -3303,11 +3301,11 @@ static void set_doze_time(int doze_time)
 }
 
 #define SUBABS(x, y) ((x)-(y))
+static uint8_t baseline_value[33 * 33];
 static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 {
 	int ret = 0;
 	int x, y;
-	uint8_t *value;
 	int k = 0;
 
 	if (!ts)
@@ -3316,7 +3314,7 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	atomic_set(&ts->is_stop, 1);
 	touch_disable(ts);
 	TPD_DEBUG("%s start!\n", __func__);
-	value = kzalloc(TX_NUM*RX_NUM*2, GFP_KERNEL);
+	memset(baseline_value, 0, sizeof(baseline_value));
 	memset(delta_baseline, 0, sizeof(delta_baseline));
 
 	mutex_lock(&ts->mutex);
@@ -3335,11 +3333,13 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	checkCMD(10);
 
 	ret = synaptics_rmi4_i2c_read_block(ts->client,
-	F54_ANALOG_DATA_BASE + 3, 2*TX_NUM*RX_NUM, value);
+					    F54_ANALOG_DATA_BASE + 3,
+					    2 * TX_NUM * RX_NUM, baseline_value);
 	for (x = 0; x < TX_NUM; x++) {
 		for (y = 0; y < RX_NUM; y++) {
-			delta_baseline[x][y] =  (int16_t)(((uint16_t)(value[k]))
-			| ((uint16_t)(value[k+1] << 8)));
+			delta_baseline[x][y] =
+			    (int16_t) (((uint16_t) (baseline_value[k]))
+				       | ((uint16_t) (baseline_value[k + 1] << 8)));
 			k = k + 2;
 
 			if (flag)
@@ -3363,7 +3363,6 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	synaptics_tpedge_limitfunc();
 #endif
 	TPD_DEBUG("%s end!\n", __func__);
-	kfree(value);
 	return 0;
 }
 static void tp_baseline_get_work(struct work_struct *work)
@@ -3380,15 +3379,7 @@ char __user *user_buf, size_t count, loff_t *ppos)
 	int x, y;
 	int press_points = 0;
 	int points_misspresee = 0;
-	int str_n = 0;
-
-	char *page = kzalloc(1024*2, GFP_KERNEL);
-
-	if (!page) {
-		TPD_ERR("%s malloc memery error!", __func__);
-		return -ENOMEM;
-	}
-	TPD_ERR("%s", __func__);
+	char page[64];
 
 	for (x = 0; x < TX_NUM; x++) {
 		for (y = 0; y < RX_NUM; y++) {
@@ -3414,13 +3405,12 @@ char __user *user_buf, size_t count, loff_t *ppos)
 	TPD_ERR("points_mispressee num:%d,get_tp_base:%d\n",
 	points_misspresee, get_tp_base);
 
-	str_n += snprintf(&page[str_n], 24, "\n%s %d PD > [25]\n",
-	(press_points > 4) ? "near":"away", press_points);
+	snprintf(page, 24, "\n%s %d PD > [25]\n",
+			  (press_points > 4) ? "near" : "away", press_points);
 
 	ret = simple_read_from_buffer(user_buf, count,
 	ppos, page, strlen(page));
 
-	kfree(page);
 	return ret;
 }
 
@@ -4696,6 +4686,16 @@ static int synaptics_ts_probe(struct i2c_client *client,
 
 		version_is_s3508 = 1;
 	}
+
+	if (version_is_s3508)
+		F12_2D_DATA04 = 0x0008;
+	else
+		F12_2D_DATA04 = 0x000A;
+
+	if (version_is_s3508)
+		F12_2D_DATA15 = 0x0009;
+	else
+		F12_2D_DATA15 = 0x000C;
 
 	strlcpy(ts->test_limit_name, "tp/14049/14049_Limit_jdi.img",
 	sizeof(ts->test_limit_name));
