@@ -407,6 +407,9 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-sequence-point -Wno-unused-value -Wno-uninitialized -Wno-missing-attributes \
 		   -Wno-builtin-declaration-mismatch -Wno-restrict
 
+# Avoid gcc-10 regression
+KBUILD_CFLAGS	+= --param=max-inline-insns-auto=1000
+
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
 endif
